@@ -1,0 +1,59 @@
+# vaultGFS configuration model
+#
+# Cron-like schedule format:
+# minute hour day-of-month month day-of-week
+# Examples:
+# 0 1 * * * every day at 01:00
+# 30 2 * * 0 every Sunday at 02:30
+# 0 3 1 * * first day of each month at 03:00
+# 0 1,13 * * * every day at 01:00 and 13:00
+
+[defaults]
+state_dir = "/var/lib/vaultgfs"
+catalog = "/var/lib/vaultgfs/catalog.db"
+destination_root = "/mnt/usb1/backups"
+run_user = "vaultgfs"
+run_group = "vaultgfs"
+compression_level = 22
+compression_threads = 2
+max_concurrent_backups = 1
+lock_wait_seconds = 10
+
+storage_extensions = [
+ ".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif",
+ ".mp4", ".mov", ".avi", ".mpg", ".mpeg", ".mkv",
+ ".mp3", ".wav", ".flac",
+ ".zip", ".rar", ".7z", ".gz", ".bz2", ".xz", ".zst",
+ ".jar", ".war", ".ear", ".pdf", ".psd", ".img", ".iso",
+ ".exe", ".msi", ".apk"
+]
+
+[mysql]
+host = "localhost"
+port = 3306
+user = "vaultGFS"
+password = "CHANGE_ME"
+socket = "/var/run/mysqld/mysqld.sock"
+ssl_mode = "DISABLED"
+
+[[jobs]]
+name = "example-filesystem"
+enabled = true
+type = "filesystem-gfs"
+source = "/path/to/source"
+destination = "/mnt/usb1/backups/example-filesystem"
+skip_if_unchanged = true
+compression_level = 22
+schedule_full = "0 3 1 * *"
+schedule_diff = "0 2 * * 0"
+schedule_inc = "0 1 * * *"
+
+[[jobs]]
+name = "example-mysql-schema"
+enabled = true
+type = "mysql-dump"
+schemas = ["example_schema"]
+destination = "/mnt/usb1/backups/mysql/example_schema"
+skip_if_unchanged = false
+compression_level = 22
+schedule = "0 4 * * *"

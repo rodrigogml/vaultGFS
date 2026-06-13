@@ -1,0 +1,19 @@
+[project]
+name = "vaultGFS"
+version = "0.1.0"
+description = "Configurable GFS-oriented backup utility for filesystems and databases"
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "vaultGFS contributors"}]
+
+[project.scripts]
+vaultgfs-backup = "vaultgfs.cli_backup:main"
+vaultgfs-reload = "vaultgfs.cli_reload:main"
+vaultgfs-restore = "vaultgfs.cli_restore:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

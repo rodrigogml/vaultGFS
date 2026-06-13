@@ -1,0 +1,12 @@
+config.toml
+*.secret
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.vaultgfs-runtime/
+logs/
+*.db
+build/
+dist/
+*.egg-info/
