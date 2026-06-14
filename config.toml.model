@@ -8,17 +8,28 @@
 # 0 3 1 * * first day of each month at 03:00
 # 0 1,13 * * * every day at 01:00 and 13:00
 
+# Defaults applied to all jobs unless overridden
 [defaults]
+# Diretório de estado do vaultGFS (locks, arquivos auxiliares, etc.)
 state_dir = "/var/lib/vaultgfs"
+# Caminho do catálogo SQLite que registra execuções e snapshots
 catalog = "/var/lib/vaultgfs/catalog.db"
+# Raiz padrão para backups; jobs podem usar destinos específicos
 destination_root = "/mnt/usb1/backups"
+# Usuário do sistema recomendado para rodar os backups
 run_user = "vaultgfs"
+# Grupo do sistema recomendado para rodar os backups
 run_group = "vaultgfs"
+# Nível padrão de compressão zstd (1–22); pode ser sobrescrito por job
 compression_level = 22
+# Threads padrão de compressão zstd; 1 ou 2 geralmente é suficiente
 compression_threads = 2
+# Número máximo de backups rodando ao mesmo tempo (fila global)
 max_concurrent_backups = 1
+# Intervalo (segundos) entre tentativas de pegar um slot de backup
 lock_wait_seconds = 10
 
+# Extensões tratadas como "storage" (já comprimidas ou pouco compressíveis)
 storage_extensions = [
  ".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif",
  ".mp4", ".mov", ".avi", ".mpg", ".mpeg", ".mkv",
@@ -28,32 +39,65 @@ storage_extensions = [
  ".exe", ".msi", ".apk"
 ]
 
+# Configuração padrão de conexão MySQL para todos os jobs mysql-dump
 [mysql]
+# Host MySQL usado quando socket não for informado
 host = "localhost"
+# Porta MySQL usada quando socket não for informado
 port = 3306
+# Usuário MySQL usado pelos dumps (conceda apenas permissões de leitura)
 user = "vaultGFS"
+# Senha do usuário MySQL (não commitar a versão real deste arquivo)
 password = "CHANGE_ME"
+# Socket local do MySQL; tem prioridade sobre host/porta quando definido
 socket = "/var/run/mysqld/mysqld.sock"
+# Modo SSL para o cliente MySQL (por exemplo, DISABLED, REQUIRED)
 ssl_mode = "DISABLED"
 
+# ----------------------------
+# Definição de um job de backup
+# Exemplo: filesystem com GFS (full/diff/inc)
+# ----------------------------
 [[jobs]]
+# Nome único do job (usado em logs, catálogo e nomes de diretório)
 name = "example-filesystem"
+# Se false, o job é ignorado pelo vaultgfs-backup
 enabled = true
+# Tipo do job: use "filesystem-gfs" para backup de diretórios
 type = "filesystem-gfs"
+# Diretório de origem a ser protegido por este job
 source = "/path/to/source"
+# Diretório onde os backups deste job serão escritos
 destination = "/mnt/usb1/backups/example-filesystem"
+# Se true, evita novo backup quando nenhum arquivo mudou desde o último snapshot
 skip_if_unchanged = true
+# Nível de compressão zstd específico deste job (opcional)
 compression_level = 22
+# Agendamento sugerido (cron) para backups FULL deste job
 schedule_full = "0 3 1 * *"
+# Agendamento sugerido (cron) para backups diferenciais (DIFF) deste job
 schedule_diff = "0 2 * * 0"
+# Agendamento sugerido (cron) para backups incrementais (INC) deste job
 schedule_inc = "0 1 * * *"
 
+# ----------------------------
+# Definição de um job MySQL
+# Exemplo: dump lógico de um schema
+# ----------------------------
 [[jobs]]
+# Nome único do job MySQL
 name = "example-mysql-schema"
+# Se false, o job é ignorado
 enabled = true
+# Tipo do job: use "mysql-dump" para dumps lógicos de schema(s) MySQL
 type = "mysql-dump"
+# Lista de schemas MySQL a serem exportados por este job
 schemas = ["example_schema"]
+# Diretório onde os arquivos .sql.zst deste job serão gravados
 destination = "/mnt/usb1/backups/mysql/example_schema"
+# Dumps normalmente não usam skip_if_unchanged; deixe false
 skip_if_unchanged = false
+# Nível de compressão zstd específico deste job
 compression_level = 22
+# Agendamento sugerido (cron) diário para este dump MySQL
 schedule = "0 4 * * *"
