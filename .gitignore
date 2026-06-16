@@ -10,3 +10,5 @@ logs/
 build/
 dist/
 *.egg-info/
+config.toml.local
+*.pyc
