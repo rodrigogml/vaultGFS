@@ -1,6 +1,6 @@
 [project]
 name = "vaultGFS"
-version = "0.1.0"
+version = "1.0.1"
 description = "Configurable GFS-oriented backup utility for filesystems and databases"
 requires-python = ">=3.11"
 readme = "README.md"

@@ -56,10 +56,14 @@ def main(argv=None):
     if not job:
         print(f"Job not found: {ns.job}", file=sys.stderr)
         return 2
-    start=time.time()
-    started=datetime.now().isoformat(timespec="seconds")
+    queued_at=datetime.now().isoformat(timespec="seconds")
+    queue_start_ts=time.time()
     slotter=BackupSlot(cfg)
     slot=slotter.acquire()
+    start=time.time()
+    started=datetime.now().isoformat(timespec="seconds")
+    queue_seconds=start-queue_start_ts
+    print(f"QUEUE_INFO job={ns.job} level={ns.level or 'dump'} queued_at={queued_at} started={started} queue_seconds={queue_seconds:.3f} slot={slot}", flush=True)
     print(f"RUN_START job={ns.job} level={ns.level or 'dump'} slot={slot} started={started}", flush=True)
     try:
         if not job.get("enabled", True):

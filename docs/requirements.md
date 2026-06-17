@@ -218,4 +218,6 @@ Behavior:
 - When all slots are busy, the new process waits and logs a `WAIT concurrency` message every `lock_wait_seconds`.
 - The lock must be process-safe and automatically released if the process exits.
 - Production recommendation for small servers or servers with MySQL dumps: `max_concurrent_backups = 1`.
-- Each job log must include `RUN_START` and `RUN_END` with timestamps and `duration_seconds`.
+- Each job log must include `QUEUE_INFO`, `RUN_START` and `RUN_END` with timestamps.
+- `QUEUE_INFO` must report the queue entry time, effective start time and queue wait duration.
+- `RUN_END.duration_seconds` must measure effective backup execution time only, excluding queue wait time.

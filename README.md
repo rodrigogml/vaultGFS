@@ -342,10 +342,13 @@ vaultgfs-backup --job example-mysql-schema
 Todo job registra início e fim:
 
 ```text
+QUEUE_INFO job=example-filesystem level=full queued_at=2026-06-13T00:09:50 started=2026-06-13T00:10:00 queue_seconds=10.002 slot=0
 RUN_START job=example-filesystem level=full slot=0 started=2026-06-13T00:10:00
 SUCCESS example-filesystem full: 123 files -> /backup/path
 RUN_END job=example-filesystem level=full slot=0 ended=2026-06-13T00:15:00 duration_seconds=300.123
 ```
+
+`QUEUE_INFO` separa o tempo aguardando slot de execução. `RUN_START.started` representa o início efetivo após adquirir slot, e `RUN_END.duration_seconds` mede somente o tempo real de execução do job.
 
 ## Executável `vaultgfs-reload`
 
@@ -427,9 +430,10 @@ Exemplos:
 Para cada execução, verifique:
 
 - `RUN_START`.
+- `QUEUE_INFO`.
 - `SUCCESS`, `SKIPPED` ou erro.
 - `RUN_END`.
-- `duration_seconds`.
+- `duration_seconds`, sem tempo de fila.
 - Mensagens `WAIT concurrency`, se houve fila.
 - Linhas `MONITOR`, em jobs MySQL com monitoramento.
 
