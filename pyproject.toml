@@ -16,6 +16,13 @@ vaultgfs-backup = "vaultgfs.cli_backup:main"
 vaultgfs-reload = "vaultgfs.cli_reload:main"
 vaultgfs-restore = "vaultgfs.cli_restore:main"
 
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 

@@ -1,10 +1,16 @@
 from __future__ import annotations
-import argparse, fcntl, os, sys, time
+import argparse, os, sys, time
 from datetime import datetime
 from pathlib import Path
 from .config import load_config, validate_config, DEFAULT_CONFIG
 from .fs_backup import run_filesystem_job
 from .mysql_dump import run_mysql_job
+from .notification import NotificationEvent, log_delivery, resolve_settings, send_notification
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 class BackupSlot:
     def __init__(self, cfg):
@@ -16,6 +22,8 @@ class BackupSlot:
         self.path=None
     
     def acquire(self):
+        if fcntl is None:
+            raise RuntimeError("backup slot locking requires fcntl")
         self.state_dir.mkdir(parents=True, exist_ok=True)
         while True:
             for slot in range(self.max_slots):
@@ -65,24 +73,60 @@ def main(argv=None):
     queue_seconds=start-queue_start_ts
     print(f"QUEUE_INFO job={ns.job} level={ns.level or 'dump'} queued_at={queued_at} started={started} queue_seconds={queue_seconds:.3f} slot={slot}", flush=True)
     print(f"RUN_START job={ns.job} level={ns.level or 'dump'} slot={slot} started={started}", flush=True)
+    rc=1
+    status='failed'
+    summary='backup did not complete'
+    should_notify=True
     try:
         if not job.get("enabled", True):
             print(f"SKIPPED {ns.job}: disabled")
-            return 0
-        if job["type"] == "filesystem-gfs":
+            should_notify=False
+            rc=0
+            status='skipped'
+            summary='job disabled'
+        if should_notify and job["type"] == "filesystem-gfs":
             if not ns.level:
                 print("--level is required for filesystem-gfs", file=sys.stderr)
-                return 2
-            return run_filesystem_job(cfg, job, ns.level)
-        if job["type"] == "mysql-dump":
-            return run_mysql_job(cfg, job)
-        print(f"Unsupported job type: {job['type']}", file=sys.stderr)
-        return 2
+                rc=2
+                summary='missing filesystem backup level'
+            else:
+                rc=run_filesystem_job(cfg, job, ns.level)
+                status='success' if rc == 0 else 'failed'
+                summary=f'filesystem backup completed with exit_code={rc}'
+        elif job["type"] == "mysql-dump" and should_notify:
+            rc=run_mysql_job(cfg, job)
+            status='success' if rc == 0 else 'failed'
+            summary=f'mysql backup completed with exit_code={rc}'
+        elif should_notify:
+            print(f"Unsupported job type: {job['type']}", file=sys.stderr)
+            rc=2
+            summary=f"unsupported job type: {job['type']}"
+        return rc
+    except Exception as exc:
+        status='failed'
+        summary=str(exc)
+        raise
     finally:
         ended=datetime.now().isoformat(timespec="seconds")
         duration=time.time()-start
+        event=None
+        if should_notify:
+            event=NotificationEvent(
+                job_name=ns.job,
+                job_type=job.get('type', ''),
+                level=ns.level or 'dump',
+                status=status,
+                started_at=started,
+                ended_at=ended,
+                duration_seconds=duration,
+                summary=summary,
+            )
         print(f"RUN_END job={ns.job} level={ns.level or 'dump'} slot={slot} ended={ended} duration_seconds={duration:.3f}", flush=True)
         slotter.release()
+        if event is not None:
+            settings=resolve_settings(cfg, job, event)
+            result=send_notification(settings)
+            log_delivery(ns.job, settings, result)
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -55,6 +55,32 @@ socket = "/var/run/mysqld/mysqld.sock"
 ssl_mode = "DISABLED"
 
 # ----------------------------
+# Optional NotiCLI notifications
+# ----------------------------
+[notifications.noticli]
+# If true, vaultGFS calls `noticli send` after backup executions.
+# The `noticli` executable must be available on the system PATH.
+enabled = false
+# Optional NotiCLI config path. If omitted, NotiCLI uses its own default.
+# config = "/opt/NotiCLI/config/noticli.json"
+# Sender identifier accepted by NotiCLI; keep it at 20 characters or less.
+sender = "vaultGFS"
+# Recipient key configured in the NotiCLI config file.
+recipient = "ops"
+# NotiCLI channel: "email", "telegram" or "slack".
+channel = "email"
+# Title and message may use these vaultGFS placeholders:
+# {job_name}, {job_type}, {level}, {status}, {started_at}, {ended_at},
+# {duration_seconds}, {summary}
+title = "vaultGFS backup {status}: {job_name}"
+message = "job={job_name} type={job_type} level={level} status={status} started={started_at} ended={ended_at} duration_seconds={duration_seconds} summary={summary}"
+
+[notifications.noticli.failure]
+# Failure-specific values override only the fields defined here.
+sender = "vaultGFS-alert"
+title = "vaultGFS BACKUP FAILED: {job_name}"
+
+# ----------------------------
 # Definição de um job de backup
 # Exemplo: filesystem com GFS (full/diff/inc)
 # ----------------------------
@@ -79,6 +105,20 @@ schedule_full = "0 3 1 * *"
 schedule_diff = "0 2 * * 0"
 # Agendamento sugerido (cron) para backups incrementais (INC) deste job
 schedule_inc = "0 1 * * *"
+
+# Optional NotiCLI override for this job.
+# Omitted fields inherit the corresponding global setting.
+[jobs.notifications.noticli]
+# enabled = false disables notifications only for this job.
+# enabled = true enables notifications for this job when global notifications
+# are disabled, as long as the effective required fields exist.
+# enabled = true
+# recipient = "ops-filesystem"
+# channel = "telegram"
+
+[jobs.notifications.noticli.failure]
+# title = "Filesystem backup failed: {job_name}"
+# recipient = "critical-ops"
 
 # ----------------------------
 # Definição de um job MySQL

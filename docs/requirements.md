@@ -138,9 +138,21 @@ Future interactive restore utility.
 - backup verification;
 - remote duplication;
 - encryption;
-- alerts;
 - cloud/object storage destinations;
 - additional databases.
+
+## NotiCLI notifications
+
+vaultGFS must support optional backup result notifications through the external `noticli` executable available on the system PATH. Notification configuration uses the existing TOML configuration model.
+
+Required behavior:
+
+- notifications can be enabled globally;
+- each job can override global notification settings or explicitly disable notifications;
+- default settings apply to all notification outcomes;
+- failure-specific settings can override title, sender, recipient, channel, message or config path for failed backups;
+- notification messages include backup execution context such as job, type, level, status, timing and summary;
+- NotiCLI delivery failures are logged with diagnostic context and must not interrupt the backup or change its final status.
 
 ## Resource control and monitoring
 

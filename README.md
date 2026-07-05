@@ -275,6 +275,47 @@ Current actions include:
 
 The generated services call `vaultgfs-backup` and rely on the global lock for concurrency control.
 
+## NotiCLI Notifications
+
+vaultGFS can optionally call `noticli send` after a backup execution finishes. NotiCLI is an external executable and must be available on the system `PATH`; vaultGFS does not embed or install it.
+
+Global configuration uses the existing TOML configuration file:
+
+```toml
+[notifications.noticli]
+enabled = true
+config = "/opt/NotiCLI/config/noticli.json" # optional
+sender = "vaultGFS"
+recipient = "ops"
+channel = "email"
+title = "vaultGFS backup {status}: {job_name}"
+message = "job={job_name} level={level} status={status} summary={summary}"
+
+[notifications.noticli.failure]
+sender = "vaultGFS-alert"
+title = "vaultGFS BACKUP FAILED: {job_name}"
+```
+
+Jobs may override the same fields. Omitted job fields inherit the effective global value:
+
+```toml
+[[jobs]]
+name = "example-filesystem"
+type = "filesystem-gfs"
+# remaining job fields...
+
+[jobs.notifications.noticli]
+recipient = "ops-filesystem"
+
+[jobs.notifications.noticli.failure]
+recipient = "critical-ops"
+title = "Filesystem backup failed: {job_name}"
+```
+
+Supported placeholders in `title` and `message` are `{job_name}`, `{job_type}`, `{level}`, `{status}`, `{started_at}`, `{ended_at}`, `{duration_seconds}` and `{summary}`.
+
+Notification delivery failures are logged as `NOTIFICATION_FAILED` with job, notification type, channel, recipient, exit code and diagnostics when available. They do not interrupt the backup flow and do not change the final backup result.
+
 ## Logs And Catalog
 
 Every backup run logs queue and runtime boundaries:

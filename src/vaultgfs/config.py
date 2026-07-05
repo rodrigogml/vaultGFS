@@ -1,6 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 import tomllib
+from .notification import validate_noticli_config
 
 DEFAULT_CONFIG = "/opt/vaultGFS/config.toml"
 SYSTEM_SCHEMAS = {"mysql", "information_schema", "performance_schema", "sys"}
@@ -47,4 +48,5 @@ def validate_config(cfg: dict) -> list[str]:
 			for s in job.get("schemas", []):
 				if s in SYSTEM_SCHEMAS:
 					errors.append(f"job {name}: system schema not allowed: {s}")
+	errors.extend(validate_noticli_config(cfg))
 	return errors
