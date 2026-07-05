@@ -57,28 +57,53 @@ ssl_mode = "DISABLED"
 # ----------------------------
 # Optional NotiCLI notifications
 # ----------------------------
+# NotiCLI project and setup reference:
+# https://github.com/rodrigogml/NotiCLI
+#
+# Install/configure NotiCLI separately and make sure the executable is available
+# as `noticli` on the system PATH for the user that runs vaultGFS.
+# vaultGFS calls:
+# noticli send [--config <path>] --sender <text> --recipient <id> --channel <name> --title <text> --message <text>
+#
+# The NotiCLI config file defines recipients, email/telegram/slack channels and
+# channel secrets. Do not put NotiCLI secrets in this vaultGFS config unless the
+# NotiCLI project explicitly supports that in a future version.
 [notifications.noticli]
 # If true, vaultGFS calls `noticli send` after backup executions.
 # The `noticli` executable must be available on the system PATH.
 enabled = false
-# Optional NotiCLI config path. If omitted, NotiCLI uses its own default.
+
+# Optional NotiCLI config path passed as `--config`.
+# If omitted, NotiCLI uses its own default config lookup.
 # config = "/opt/NotiCLI/config/noticli.json"
-# Sender identifier accepted by NotiCLI; keep it at 20 characters or less.
-sender = "vaultGFS"
+
+# Sender identifier accepted by NotiCLI and used for filtering notifications.
+# Keep it at 20 characters or less.
+# sender = "vaultGFS"
+
 # Recipient key configured in the NotiCLI config file.
-recipient = "ops"
+# Example: a key under `recipients` in noticli.json.
+# recipient = "ops"
+
 # NotiCLI channel: "email", "telegram" or "slack".
-channel = "email"
+# The selected channel must be configured in the NotiCLI config file.
+# channel = "email"
+
 # Title and message may use these vaultGFS placeholders:
 # {job_name}, {job_type}, {level}, {status}, {started_at}, {ended_at},
 # {duration_seconds}, {summary}
-title = "vaultGFS backup {status}: {job_name}"
-message = "job={job_name} type={job_type} level={level} status={status} started={started_at} ended={ended_at} duration_seconds={duration_seconds} summary={summary}"
+# title = "vaultGFS backup {status}: {job_name}"
+
+# Message is optional. If omitted, vaultGFS renders a default execution summary.
+# message = "job={job_name} type={job_type} level={level} status={status} started={started_at} ended={ended_at} duration_seconds={duration_seconds} summary={summary}"
 
 [notifications.noticli.failure]
-# Failure-specific values override only the fields defined here.
-sender = "vaultGFS-alert"
-title = "vaultGFS BACKUP FAILED: {job_name}"
+# Failure-specific values override only the fields defined here when the backup
+# status is failed. Use this to route failures to another recipient/channel or to
+# use a different sender/title for filters and alert rules.
+# sender = "vaultGFS-alert"
+
+# title = "vaultGFS BACKUP FAILED: {job_name}"
 
 # ----------------------------
 # Definição de um job de backup
@@ -113,11 +138,17 @@ schedule_inc = "0 1 * * *"
 # enabled = true enables notifications for this job when global notifications
 # are disabled, as long as the effective required fields exist.
 # enabled = true
+
+# Use job overrides to route this job to a different NotiCLI recipient/channel.
 # recipient = "ops-filesystem"
+
 # channel = "telegram"
 
 [jobs.notifications.noticli.failure]
+# Failure-specific job overrides inherit unspecified values from the job default,
+# then from the global failure/default settings.
 # title = "Filesystem backup failed: {job_name}"
+
 # recipient = "critical-ops"
 
 # ----------------------------

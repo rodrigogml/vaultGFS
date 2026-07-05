@@ -13,6 +13,7 @@ The project is packaged as a standard Python distribution with console entrypoin
 - Global process-safe backup slot lock for queueing concurrent starts.
 - Separate archives for already-compressed files and compressible files.
 - Optional MySQL resource monitoring with passive logging or active throttling.
+- Optional backup result notifications through NotiCLI.
 - Assisted environment reload that validates configuration and generates systemd units/timers.
 - TOML-based configuration.
 
@@ -45,6 +46,7 @@ Generated files such as `dist/`, `build/`, `*.egg-info`, logs, catalogs, and rea
 - `zstd`.
 - `mysqldump` and `mysql` when using MySQL jobs.
 - `systemd` when using `vaultgfs-reload` to generate timers.
+- `noticli` on the system `PATH` when NotiCLI notifications are enabled.
 
 ## Build
 
@@ -279,6 +281,8 @@ The generated services call `vaultgfs-backup` and rely on the global lock for co
 
 vaultGFS can optionally call `noticli send` after a backup execution finishes. NotiCLI is an external executable and must be available on the system `PATH`; vaultGFS does not embed or install it.
 
+See the [NotiCLI repository](https://github.com/rodrigogml/NotiCLI) for NotiCLI installation, channel configuration and recipient setup.
+
 Global configuration uses the existing TOML configuration file:
 
 ```toml
@@ -313,6 +317,19 @@ title = "Filesystem backup failed: {job_name}"
 ```
 
 Supported placeholders in `title` and `message` are `{job_name}`, `{job_type}`, `{level}`, `{status}`, `{started_at}`, `{ended_at}`, `{duration_seconds}` and `{summary}`.
+
+Supported vaultGFS NotiCLI settings:
+
+| Setting | Required when enabled | Description |
+|---------|-----------------------|-------------|
+| `enabled` | no | Enables or disables NotiCLI notifications globally or for one job. Defaults to disabled globally. |
+| `config` | no | Optional path passed as `noticli send --config`. If omitted, NotiCLI uses its own default config lookup. |
+| `sender` | yes | Value passed as `--sender`; keep it at 20 characters or less to match NotiCLI constraints. |
+| `recipient` | yes | NotiCLI recipient key passed as `--recipient`. |
+| `channel` | yes | NotiCLI channel passed as `--channel`; supported values are `email`, `telegram` and `slack`. |
+| `title` | yes | Notification title passed as `--title`; supports vaultGFS placeholders. |
+| `message` | no | Notification body passed as `--message`; supports vaultGFS placeholders. If omitted, vaultGFS renders a default execution summary. |
+| `failure` | no | Nested table with values that override default notification settings only for failed backups. |
 
 Notification delivery failures are logged as `NOTIFICATION_FAILED` with job, notification type, channel, recipient, exit code and diagnostics when available. They do not interrupt the backup flow and do not change the final backup result.
 
