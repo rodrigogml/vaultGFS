@@ -24,8 +24,7 @@ def base_cfg():
             "noticli": {
                 "enabled": True,
                 "sender": "vaultGFS",
-                "recipient": "ops",
-                "channel": "email",
+                "category": "SUCCESS",
                 "title": "Backup {status}",
             }
         },
@@ -78,7 +77,7 @@ def test_cli_preserves_backup_success_when_notification_fails(monkeypatch, capsy
 
     assert rc == 0
     output = capsys.readouterr().out
-    assert "NOTIFICATION_FAILED job=files type=success channel=email recipient=ops exit_code=6" in output
+    assert "NOTIFICATION_FAILED job=files type=success category=SUCCESS priority=- exit_code=6" in output
     assert "RUN_END job=files" in output
 
 

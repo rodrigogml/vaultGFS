@@ -63,9 +63,9 @@ ssl_mode = "DISABLED"
 # Install/configure NotiCLI separately and make sure the executable is available
 # as `noticli` on the system PATH for the user that runs vaultGFS.
 # vaultGFS calls:
-# noticli send [--config <path>] --sender <text> --recipient <id> --channel <name> --title <text> --message <text>
+# noticli send [--config <path>] --sender <text> --category <SUCCESS|FAIL> [--priority <HIGH|NORMAL|LOW>] --title <text> --message <text>
 #
-# The NotiCLI config file defines recipients, email/telegram/slack channels and
+# The NotiCLI config file defines destinations, delivery accounts, routes and
 # channel secrets. Do not put NotiCLI secrets in this vaultGFS config unless the
 # NotiCLI project explicitly supports that in a future version.
 [notifications.noticli]
@@ -81,13 +81,11 @@ enabled = false
 # Keep it at 20 characters or less.
 # sender = "vaultGFS"
 
-# Recipient key configured in the NotiCLI config file.
-# Example: a key under `recipients` in noticli.json.
-# recipient = "ops"
+# Category passed to NotiCLI for routing. Defaults should distinguish success and failure.
+category = "SUCCESS"
 
-# NotiCLI channel: "email", "telegram" or "slack".
-# The selected channel must be configured in the NotiCLI config file.
-# channel = "email"
+# Optional NotiCLI priority. Leave unset for successful notifications so NotiCLI uses NORMAL.
+# priority = "NORMAL"
 
 # Title and message may use these vaultGFS placeholders:
 # {job_name}, {job_type}, {level}, {status}, {started_at}, {ended_at},
@@ -99,9 +97,10 @@ enabled = false
 
 [notifications.noticli.failure]
 # Failure-specific values override only the fields defined here when the backup
-# status is failed. Use this to route failures to another recipient/channel or to
-# use a different sender/title for filters and alert rules.
-# sender = "vaultGFS-alert"
+# status is failed. Use this to mark failures as high priority and route them
+# through NotiCLI rules.
+category = "FAIL"
+priority = "HIGH"
 
 # title = "vaultGFS BACKUP FAILED: {job_name}"
 
@@ -139,17 +138,16 @@ schedule_inc = "0 1 * * *"
 # are disabled, as long as the effective required fields exist.
 # enabled = true
 
-# Use job overrides to route this job to a different NotiCLI recipient/channel.
-# recipient = "ops-filesystem"
-
-# channel = "telegram"
+# Use job overrides to route this job differently through NotiCLI category rules.
+# category = "FILESYSTEM"
 
 [jobs.notifications.noticli.failure]
 # Failure-specific job overrides inherit unspecified values from the job default,
 # then from the global failure/default settings.
 # title = "Filesystem backup failed: {job_name}"
 
-# recipient = "critical-ops"
+# category = "FAIL"
+# priority = "HIGH"
 
 # ----------------------------
 # Definição de um job MySQL

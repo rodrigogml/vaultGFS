@@ -281,7 +281,7 @@ The generated services call `vaultgfs-backup` and rely on the global lock for co
 
 vaultGFS can optionally call `noticli send` after a backup execution finishes. NotiCLI is an external executable and must be available on the system `PATH`; vaultGFS does not embed or install it.
 
-See the [NotiCLI repository](https://github.com/rodrigogml/NotiCLI) for NotiCLI installation, channel configuration and recipient setup.
+See the [NotiCLI repository](https://github.com/rodrigogml/NotiCLI) for NotiCLI installation, destination, delivery account and route setup.
 
 Global configuration uses the existing TOML configuration file:
 
@@ -290,13 +290,13 @@ Global configuration uses the existing TOML configuration file:
 enabled = true
 config = "/opt/NotiCLI/config/noticli.json" # optional
 sender = "vaultGFS"
-recipient = "ops"
-channel = "email"
+category = "SUCCESS"
 title = "vaultGFS backup {status}: {job_name}"
 message = "job={job_name} level={level} status={status} summary={summary}"
 
 [notifications.noticli.failure]
-sender = "vaultGFS-alert"
+category = "FAIL"
+priority = "HIGH"
 title = "vaultGFS BACKUP FAILED: {job_name}"
 ```
 
@@ -309,10 +309,11 @@ type = "filesystem-gfs"
 # remaining job fields...
 
 [jobs.notifications.noticli]
-recipient = "ops-filesystem"
+category = "FILESYSTEM"
 
 [jobs.notifications.noticli.failure]
-recipient = "critical-ops"
+category = "FAIL"
+priority = "HIGH"
 title = "Filesystem backup failed: {job_name}"
 ```
 
@@ -325,13 +326,13 @@ Supported vaultGFS NotiCLI settings:
 | `enabled` | no | Enables or disables NotiCLI notifications globally or for one job. Defaults to disabled globally. |
 | `config` | no | Optional path passed as `noticli send --config`. If omitted, NotiCLI uses its own default config lookup. |
 | `sender` | yes | Value passed as `--sender`; keep it at 20 characters or less to match NotiCLI constraints. |
-| `recipient` | yes | NotiCLI recipient key passed as `--recipient`. |
-| `channel` | yes | NotiCLI channel passed as `--channel`; supported values are `email`, `telegram` and `slack`. |
+| `category` | yes | Value passed as `--category`; defaults should use `SUCCESS` for successful backups and `FAIL` for failed backups. |
+| `priority` | no | Optional value passed as `--priority`; use `HIGH` for failed backups and omit it for successful backups. |
 | `title` | yes | Notification title passed as `--title`; supports vaultGFS placeholders. |
 | `message` | no | Notification body passed as `--message`; supports vaultGFS placeholders. If omitted, vaultGFS renders a default execution summary. |
 | `failure` | no | Nested table with values that override default notification settings only for failed backups. |
 
-Notification delivery failures are logged as `NOTIFICATION_FAILED` with job, notification type, channel, recipient, exit code and diagnostics when available. They do not interrupt the backup flow and do not change the final backup result.
+Notification delivery failures are logged as `NOTIFICATION_FAILED` with job, notification type, category, priority, exit code and diagnostics when available. They do not interrupt the backup flow and do not change the final backup result.
 
 ## Logs And Catalog
 

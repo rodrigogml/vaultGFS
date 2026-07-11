@@ -31,8 +31,7 @@ def test_resolve_settings_uses_job_failure_overrides_before_global_defaults():
             "noticli": {
                 "enabled": True,
                 "sender": "vaultGFS",
-                "recipient": "ops",
-                "channel": "email",
+                "category": "SUCCESS",
                 "title": "Backup {status}",
                 "message": "Job {job_name} {status}",
                 "failure": {"title": "Global failure"},
@@ -44,7 +43,7 @@ def test_resolve_settings_uses_job_failure_overrides_before_global_defaults():
         "type": "filesystem-gfs",
         "notifications": {
             "noticli": {
-                "recipient": "critical",
+                "category": "FAIL",
                 "failure": {"sender": "vaultAlert", "title": "Job {job_name} failed"},
             }
         },
@@ -55,8 +54,8 @@ def test_resolve_settings_uses_job_failure_overrides_before_global_defaults():
     assert settings.enabled is True
     assert settings.notification_type == "failure"
     assert settings.sender == "vaultAlert"
-    assert settings.recipient == "critical"
-    assert settings.channel == "email"
+    assert settings.category == "FAIL"
+    assert settings.priority == "HIGH"
     assert settings.title == "Job files failed"
     assert settings.message == "Job files failed"
 
@@ -67,8 +66,8 @@ def test_build_command_omits_optional_config_when_not_configured():
         notification_type="success",
         config=None,
         sender="vaultGFS",
-        recipient="ops",
-        channel="email",
+        category="SUCCESS",
+        priority=None,
         title="Backup ok",
         message="Done",
     )
@@ -78,10 +77,8 @@ def test_build_command_omits_optional_config_when_not_configured():
         "send",
         "--sender",
         "vaultGFS",
-        "--recipient",
-        "ops",
-        "--channel",
-        "email",
+        "--category",
+        "SUCCESS",
         "--title",
         "Backup ok",
         "--message",
@@ -95,8 +92,8 @@ def test_send_notification_returns_failed_result_without_raising_on_nonzero_exit
         notification_type="failure",
         config="/opt/noticli.json",
         sender="vaultGFS",
-        recipient="ops",
-        channel="email",
+        category="FAIL",
+        priority="HIGH",
         title="Backup failed",
         message="Failure",
     )
@@ -118,8 +115,8 @@ def test_send_notification_returns_failed_result_when_executable_is_missing():
         notification_type="success",
         config=None,
         sender="vaultGFS",
-        recipient="ops",
-        channel="email",
+        category="SUCCESS",
+        priority=None,
         title="Backup ok",
         message="Done",
     )

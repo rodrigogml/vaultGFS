@@ -13,8 +13,7 @@ catalog = "/tmp/catalog.db"
 [notifications.noticli]
 enabled = true
 sender = "vaultGFS"
-recipient = "ops"
-channel = "email"
+category = "SUCCESS"
 title = "Backup {status}"
 
 [[jobs]]
@@ -34,15 +33,14 @@ schedule = "0 1 * * *"
     assert validate_config(cfg) == []
 
 
-def test_validate_config_reports_invalid_noticli_channel():
+def test_validate_config_reports_invalid_noticli_priority():
     cfg = {
         "defaults": {},
         "notifications": {
             "noticli": {
                 "enabled": True,
                 "sender": "vaultGFS",
-                "recipient": "ops",
-                "channel": "sms",
+                "priority": "URGENT",
                 "title": "Backup",
             }
         },
@@ -60,8 +58,8 @@ def test_validate_config_reports_invalid_noticli_channel():
 
     errors = validate_config(cfg)
 
-    assert "notifications.noticli: channel must be one of email, slack, telegram" in errors
-    assert "job mysql effective success: channel must be one of email, slack, telegram" in errors
+    assert "notifications.noticli: priority must be one of HIGH, LOW, NORMAL" in errors
+    assert "job mysql effective success: priority must be one of HIGH, LOW, NORMAL" in errors
 
 
 def test_validate_config_allows_partial_job_override_from_global_defaults():
@@ -71,8 +69,7 @@ def test_validate_config_allows_partial_job_override_from_global_defaults():
             "noticli": {
                 "enabled": False,
                 "sender": "vaultGFS",
-                "recipient": "ops",
-                "channel": "email",
+                "category": "SUCCESS",
                 "title": "Backup",
             }
         },
@@ -84,7 +81,7 @@ def test_validate_config_allows_partial_job_override_from_global_defaults():
                 "schemas": ["app"],
                 "destination": "/backup/mysql",
                 "schedule": "0 1 * * *",
-                "notifications": {"noticli": {"enabled": True, "recipient": "db-ops"}},
+                "notifications": {"noticli": {"enabled": True, "category": "DB"}},
             }
         ],
     }

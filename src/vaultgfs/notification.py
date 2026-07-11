@@ -5,7 +5,7 @@ import re
 import subprocess
 from typing import Callable
 
-SUPPORTED_CHANNELS = {"email", "telegram", "slack"}
+SUPPORTED_PRIORITIES = {"HIGH", "NORMAL", "LOW"}
 SECRET_PATTERN = re.compile(
     r"(?i)(xox[baprs]-[a-z0-9-]+|https://hooks\.slack\.com/services/\S+|"
     r"bearer\s+[a-z0-9._~+/=-]+|token[=:]\S+|password[=:]\S+|secret[=:]\S+)"
@@ -30,8 +30,8 @@ class EffectiveNotiCLISettings:
     notification_type: str
     config: str | None
     sender: str | None
-    recipient: str | None
-    channel: str | None
+    category: str | None
+    priority: str | None
     title: str | None
     message: str | None
 
@@ -78,8 +78,8 @@ def resolve_settings(cfg: dict, job: dict, event: NotificationEvent) -> Effectiv
         notification_type=notification_type,
         config=values.get("config"),
         sender=values.get("sender"),
-        recipient=values.get("recipient"),
-        channel=values.get("channel"),
+        category=values.get("category") or ("FAIL" if notification_type == "failure" else "SUCCESS"),
+        priority=values.get("priority") or ("HIGH" if notification_type == "failure" else None),
         title=title,
         message=message,
     )
@@ -127,21 +127,21 @@ def _validate_section(errors: list[str], label: str, section: dict) -> None:
 
 
 def _validate_values(errors: list[str], label: str, values: dict) -> None:
-    for key in ("config", "sender", "recipient", "channel", "title", "message"):
+    for key in ("config", "sender", "category", "priority", "title", "message"):
         if key in values and values[key] is not None and not isinstance(values[key], str):
             errors.append(f"{label}: {key} must be a string")
     if "sender" in values and isinstance(values["sender"], str) and len(values["sender"]) > 20:
         errors.append(f"{label}: sender must be at most 20 characters")
-    if "channel" in values and values["channel"] not in SUPPORTED_CHANNELS:
-        errors.append(f"{label}: channel must be one of {', '.join(sorted(SUPPORTED_CHANNELS))}")
+    if "priority" in values and isinstance(values["priority"], str) and values["priority"] not in SUPPORTED_PRIORITIES:
+        errors.append(f"{label}: priority must be one of {', '.join(sorted(SUPPORTED_PRIORITIES))}")
 
 
 def _validate_effective(errors: list[str], label: str, settings: EffectiveNotiCLISettings) -> None:
-    for key in ("sender", "recipient", "channel", "title", "message"):
+    for key in ("sender", "category", "title", "message"):
         if not getattr(settings, key):
             errors.append(f"{label}: missing {key}")
-    if settings.channel and settings.channel not in SUPPORTED_CHANNELS:
-        errors.append(f"{label}: channel must be one of {', '.join(sorted(SUPPORTED_CHANNELS))}")
+    if settings.priority and settings.priority not in SUPPORTED_PRIORITIES:
+        errors.append(f"{label}: priority must be one of {', '.join(sorted(SUPPORTED_PRIORITIES))}")
 
 
 def default_title(event: NotificationEvent) -> str:
@@ -177,7 +177,7 @@ def _render(template: str | None, event: NotificationEvent) -> str | None:
 
 def build_command(settings: EffectiveNotiCLISettings) -> list[str]:
     missing = [
-        key for key in ("sender", "recipient", "channel", "title", "message")
+        key for key in ("sender", "category", "title", "message")
         if not getattr(settings, key)
     ]
     if missing:
@@ -187,11 +187,12 @@ def build_command(settings: EffectiveNotiCLISettings) -> list[str]:
         cmd += ["--config", settings.config]
     cmd += [
         "--sender", settings.sender or "",
-        "--recipient", settings.recipient or "",
-        "--channel", settings.channel or "",
+        "--category", settings.category or "",
         "--title", settings.title or "",
         "--message", settings.message or "",
     ]
+    if settings.priority:
+        cmd += ["--priority", settings.priority]
     return cmd
 
 
@@ -227,7 +228,7 @@ def log_delivery(job_name: str, settings: EffectiveNotiCLISettings, result: Noti
         return
     base = (
         f"NOTIFICATION_{result.status.upper()} job={job_name} type={settings.notification_type} "
-        f"channel={settings.channel or '-'} recipient={settings.recipient or '-'}"
+        f"category={settings.category or '-'} priority={settings.priority or '-'}"
     )
     if result.exit_code is not None:
         base += f" exit_code={result.exit_code}"
