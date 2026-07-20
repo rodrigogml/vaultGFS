@@ -130,6 +130,7 @@ compression_level = 22
 compression_threads = 2
 max_concurrent_backups = 1
 lock_wait_seconds = 10
+prune_schedule = "0 20 * * 0"
 
 storage_extensions = [".jpg", ".png", ".mp4", ".zip", ".7z", ".pdf"]
 
@@ -295,6 +296,10 @@ vaultgfs-prune --config /path/to/config.toml --job example-filesystem --apply
 For filesystem GFS jobs, `keep_full`, `keep_diff` and `keep_inc` keep the most recent successful runs per level. When a retained incremental or differential depends on older runs, vaultGFS automatically retains the required parent chain.
 
 For MySQL jobs, dumps are independent. Retention keeps the latest dump per day, per Sunday-to-Saturday week and per calendar month, then deduplicates overlapping selections.
+
+`vaultgfs-reload` generates a `vaultgfs-prune.timer` from `defaults.prune_schedule`.
+The default schedule is Sundays at 20:00. Prune executions send NotiCLI
+notifications using the global notification settings when enabled.
 
 ## Environment Reload
 

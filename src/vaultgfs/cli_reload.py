@@ -46,8 +46,38 @@ WantedBy=timers.target
 """
 	return service, svc, timer, tmr
 
+def prune_unit_pair(cron: str):
+	safe = "vaultgfs-prune"
+	service = SYSTEMD_DIR / f"{safe}.service"
+	timer = SYSTEMD_DIR / f"{safe}.timer"
+	svc = f"""[Unit]
+Description=vaultGFS retention prune
+
+[Service]
+Type=oneshot
+User=vaultgfs
+Group=vaultgfs
+ExecStart=/usr/local/bin/vaultgfs-prune --apply
+"""
+	tmr = f"""[Unit]
+Description=vaultGFS retention prune timer
+
+[Timer]
+OnCalendar={cron_to_oncalendar(cron)}
+Persistent=true
+Unit={safe}.service
+
+[Install]
+WantedBy=timers.target
+"""
+	return service, svc, timer, tmr
+
 def desired_units(cfg: dict):
 	units = {}
+	prune_schedule = cfg.get("defaults", {}).get("prune_schedule", "0 20 * * 0")
+	s, sc, t, tc = prune_unit_pair(prune_schedule)
+	units[s] = sc
+	units[t] = tc
 	for job in cfg.get("jobs", []):
 		if not job.get("enabled", True):
 			continue

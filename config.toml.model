@@ -28,6 +28,8 @@ compression_threads = 2
 max_concurrent_backups = 1
 # Intervalo (segundos) entre tentativas de pegar um slot de backup
 lock_wait_seconds = 10
+# Agendamento da limpeza de retenção via vaultgfs-prune --apply
+prune_schedule = "0 20 * * 0"
 
 # Extensões tratadas como "storage" (já comprimidas ou pouco compressíveis)
 storage_extensions = [
