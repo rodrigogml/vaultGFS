@@ -6,6 +6,7 @@ from vaultgfs.notification import (
     EffectiveNotiCLISettings,
     NotificationEvent,
     build_command,
+    default_message,
     redact,
     resolve_settings,
     send_notification,
@@ -84,6 +85,36 @@ def test_build_command_omits_optional_config_when_not_configured():
         "--message",
         "Done",
     ]
+
+
+def test_default_success_message_uses_plain_text_multiline_layout():
+    assert default_message(event()) == (
+        "Backup concluido\n"
+        "\n"
+        "- Job: files\n"
+        "- Tipo: filesystem-gfs\n"
+        "- Nivel: full\n"
+        "- Status: success\n"
+        "- Inicio: 2026-07-04T10:00:00\n"
+        "- Fim: 2026-07-04T10:01:00\n"
+        "- Duracao: 60.000s\n"
+        "- Resumo: ok"
+    )
+
+
+def test_default_failure_message_labels_summary_as_error():
+    assert default_message(event("failed")) == (
+        "Backup falhou\n"
+        "\n"
+        "- Job: files\n"
+        "- Tipo: filesystem-gfs\n"
+        "- Nivel: full\n"
+        "- Status: failed\n"
+        "- Inicio: 2026-07-04T10:00:00\n"
+        "- Fim: 2026-07-04T10:01:00\n"
+        "- Duracao: 60.000s\n"
+        "- Erro: ok"
+    )
 
 
 def test_send_notification_returns_failed_result_without_raising_on_nonzero_exit():

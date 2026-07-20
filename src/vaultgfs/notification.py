@@ -149,10 +149,21 @@ def default_title(event: NotificationEvent) -> str:
 
 
 def default_message(event: NotificationEvent) -> str:
-    return (
-        f"job={event.job_name} type={event.job_type} level={event.level} "
-        f"status={event.status} started={event.started_at} ended={event.ended_at} "
-        f"duration_seconds={event.duration_seconds:.3f} summary={event.summary}"
+    heading = "Backup falhou" if event.status == "failed" else "Backup concluido"
+    detail_label = "Erro" if event.status == "failed" else "Resumo"
+    return "\n".join(
+        [
+            heading,
+            "",
+            f"- Job: {event.job_name}",
+            f"- Tipo: {event.job_type}",
+            f"- Nivel: {event.level}",
+            f"- Status: {event.status}",
+            f"- Inicio: {event.started_at}",
+            f"- Fim: {event.ended_at}",
+            f"- Duracao: {event.duration_seconds:.3f}s",
+            f"- {detail_label}: {event.summary}",
+        ]
     )
 
 
