@@ -118,3 +118,47 @@ def test_retention_for_job_uses_defaults_and_job_overrides():
     job = {"type": "filesystem-gfs", "retention": {"keep_inc": 9}}
 
     assert retention_for_job(cfg, job) == {"keep_full": 5, "keep_diff": 4, "keep_inc": 9}
+
+
+def test_catalog_migrates_existing_backup_runs_table(tmp_path):
+    db_path = tmp_path / "catalog.db"
+    import sqlite3
+
+    db = sqlite3.connect(db_path)
+    db.executescript(
+        """
+        create table backup_runs (
+         id integer primary key autoincrement,
+         job_name text not null,
+         job_type text not null,
+         level text,
+         status text not null,
+         started_at integer not null,
+         finished_at integer,
+         destination text,
+         manifest_path text,
+         message text
+        );
+        create table file_snapshots (
+         run_id integer not null,
+         job_name text not null,
+         relpath text not null,
+         size integer not null,
+         mtime_ns integer not null,
+         mode integer not null,
+         uid integer not null,
+         gid integer not null,
+         sha256 text,
+         class text,
+         primary key(run_id, relpath)
+        );
+        """
+    )
+    db.close()
+
+    migrated = catalog.connect(db_path)
+    cols = {r["name"] for r in migrated.execute("pragma table_info(backup_runs)")}
+    indexes = {r["name"] for r in migrated.execute("pragma index_list(backup_runs)")}
+
+    assert {"parent_run_id", "pruned_at", "prune_message"}.issubset(cols)
+    assert "idx_runs_parent" in indexes

@@ -46,11 +46,11 @@ def init(db):
 	 primary key(run_id, path)
 	);
 	create index if not exists idx_runs_job_status on backup_runs(job_name,status,level,id);
-	create index if not exists idx_runs_parent on backup_runs(parent_run_id);
 	""")
 	ensure_column(db, "backup_runs", "parent_run_id", "integer")
 	ensure_column(db, "backup_runs", "pruned_at", "integer")
 	ensure_column(db, "backup_runs", "prune_message", "text")
+	db.execute("create index if not exists idx_runs_parent on backup_runs(parent_run_id)")
 	db.commit()
 
 def ensure_column(db, table, column, ddl):
