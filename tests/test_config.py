@@ -109,3 +109,47 @@ def test_validate_config_reports_invalid_retention_counts():
 
     assert "defaults.retention.filesystem_gfs: keep_full must be a non-negative integer" in errors
     assert "job mysql retention: keep_daily must be a non-negative integer" in errors
+
+
+def test_validate_config_accepts_pfsense_job():
+    cfg = {
+        "defaults": {},
+        "jobs": [
+            {
+                "name": "pfsense",
+                "enabled": True,
+                "type": "pfsense-config",
+                "base_url": "https://192.168.1.1",
+                "username": "vaultGFS",
+                "password": "secret",
+                "verify_tls": False,
+                "destination": "/backup/pfsense",
+                "schedule": "0 4 * * *",
+            }
+        ],
+    }
+
+    assert validate_config(cfg) == []
+
+
+def test_validate_config_reports_invalid_pfsense_job():
+    cfg = {
+        "defaults": {},
+        "jobs": [
+            {
+                "name": "pfsense",
+                "enabled": True,
+                "type": "pfsense-config",
+                "base_url": "https://192.168.1.1",
+                "verify_tls": "no",
+                "destination": "/backup/pfsense",
+                "schedule": "0 4 * * *",
+            }
+        ],
+    }
+
+    errors = validate_config(cfg)
+
+    assert "job pfsense: missing username" in errors
+    assert "job pfsense: missing password" in errors
+    assert "job pfsense: verify_tls must be true or false" in errors

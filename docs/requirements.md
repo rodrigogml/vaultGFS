@@ -27,7 +27,7 @@ Standard attributes:
 
 - `name`: unique job name.
 - `enabled`: `true|false`. Default is `true` if absent, but examples must write it explicitly.
-- `type`: initial values: `filesystem-gfs`, `mysql-dump`.
+- `type`: initial values: `filesystem-gfs`, `mysql-dump`, `pfsense-config`.
 - `destination`: job destination.
 - `skip_if_unchanged`: if `true`, do not create a new backup when no changes are detected.
 - `compression_level`: optional override per job.
@@ -100,6 +100,17 @@ information_schema
 performance_schema
 sys
 ```
+
+## pfSense phase 1
+
+Initial scope:
+
+- full WebGUI configuration XML downloads only;
+- one timestamped `.xml.zst` file per run;
+- login through the pfSense WebGUI using a dedicated least-privilege user;
+- support self-signed TLS through explicit `verify_tls = false`;
+- validate the downloaded XML root before cataloging success;
+- use the same daily, weekly and monthly retention strategy as other monolithic backup files.
 
 Future MySQL roadmap:
 

@@ -116,3 +116,31 @@ def test_cli_sends_failure_notification_when_backup_raises(monkeypatch):
     assert len(sent) == 1
     assert sent[0].notification_type == "failure"
     assert sent[0].message and "archive failed" in sent[0].message
+
+
+def test_cli_runs_pfsense_job_and_sends_notification(monkeypatch):
+    cfg = base_cfg()
+    cfg["jobs"] = [
+        {
+            "name": "pfsense",
+            "enabled": True,
+            "type": "pfsense-config",
+            "base_url": "https://example",
+            "username": "vaultGFS",
+            "password": "secret",
+            "destination": "/backup/pfsense",
+            "schedule": "0 4 * * *",
+        }
+    ]
+    sent = []
+    called = []
+    monkeypatch.setattr(cli_backup, "load_config", lambda path: cfg)
+    monkeypatch.setattr(cli_backup, "BackupSlot", DummySlot)
+    monkeypatch.setattr(cli_backup, "run_pfsense_job", lambda cfg, job: called.append(job["name"]) or 0)
+    monkeypatch.setattr(cli_backup, "send_notification", lambda settings: sent.append(settings) or NotificationDeliveryResult(status="sent", exit_code=0))
+
+    rc = cli_backup.main(["--config", "ignored.toml", "--job", "pfsense"])
+
+    assert rc == 0
+    assert called == ["pfsense"]
+    assert sent[0].notification_type == "success"

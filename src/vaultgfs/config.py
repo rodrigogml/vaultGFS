@@ -33,7 +33,7 @@ def validate_config(cfg: dict) -> list[str]:
 			errors.append(f"job {name}: duplicate name")
 		else:
 			names.add(name)
-		if typ not in {"filesystem-gfs", "mysql-dump"}:
+		if typ not in {"filesystem-gfs", "mysql-dump", "pfsense-config"}:
 			errors.append(f"job {name}: invalid type {typ!r}")
 		if typ == "filesystem-gfs":
 			for k in ("source","destination","schedule_full","schedule_diff","schedule_inc"):
@@ -49,6 +49,14 @@ def validate_config(cfg: dict) -> list[str]:
 			for s in job.get("schemas", []):
 				if s in SYSTEM_SCHEMAS:
 					errors.append(f"job {name}: system schema not allowed: {s}")
+		if typ == "pfsense-config":
+			for k in ("base_url","username","password","destination","schedule"):
+				if not job.get(k):
+					errors.append(f"job {name}: missing {k}")
+			if "verify_tls" in job and not isinstance(job["verify_tls"], bool):
+				errors.append(f"job {name}: verify_tls must be true or false")
+			if "include_rrd" in job and not isinstance(job["include_rrd"], bool):
+				errors.append(f"job {name}: include_rrd must be true or false")
 		if "retention" in job:
 			errors.extend(validate_retention_config(job.get("retention", {}), f"job {name} retention"))
 	errors.extend(validate_noticli_config(cfg))
@@ -63,6 +71,8 @@ def validate_retention_config(retention: dict, prefix: str) -> list[str]:
 		sections.append(("filesystem_gfs", retention.get("filesystem_gfs", {}), {"keep_full", "keep_diff", "keep_inc"}))
 	if "mysql_dump" in retention:
 		sections.append(("mysql_dump", retention.get("mysql_dump", {}), {"keep_daily", "keep_weekly", "keep_monthly"}))
+	if "pfsense_config" in retention:
+		sections.append(("pfsense_config", retention.get("pfsense_config", {}), {"keep_daily", "keep_weekly", "keep_monthly"}))
 	if any(k.startswith("keep_") for k in retention):
 		sections.append((None, retention, {"keep_full", "keep_diff", "keep_inc", "keep_daily", "keep_weekly", "keep_monthly"}))
 	for section, values, allowed in sections:

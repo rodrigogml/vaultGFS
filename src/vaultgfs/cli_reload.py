@@ -83,7 +83,7 @@ def desired_units(cfg: dict):
 			continue
 		if job["type"] == "filesystem-gfs":
 			items = [("full","schedule_full","full"), ("diff","schedule_diff","diff"), ("inc","schedule_inc","inc")]
-		elif job["type"] == "mysql-dump":
+		elif job["type"] in {"mysql-dump", "pfsense-config"}:
 			items = [("dump","schedule",None)]
 		else:
 			items = []

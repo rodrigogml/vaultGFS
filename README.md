@@ -1,6 +1,6 @@
 # vaultGFS
 
-`vaultGFS` is a Python backup utility for filesystem jobs and logical MySQL dumps. It organizes filesystem backups with a GFS-style model: monthly full backups, weekly differentials, and daily incrementals.
+`vaultGFS` is a Python backup utility for filesystem jobs, logical MySQL dumps, and pfSense configuration exports. It organizes filesystem backups with a GFS-style model: monthly full backups, weekly differentials, and daily incrementals.
 
 The project is packaged as a standard Python distribution with console entrypoints. Runtime configuration is intentionally kept outside the repository; `config.toml.model` is the versioned reference configuration.
 
@@ -8,6 +8,7 @@ The project is packaged as a standard Python distribution with console entrypoin
 
 - Filesystem backup jobs with `full`, `diff`, and `inc` levels.
 - MySQL logical dumps per schema, compressed with `zstd`.
+- pfSense WebGUI configuration XML backups, compressed with `zstd`.
 - SQLite catalog for runs and filesystem snapshots.
 - Per-run `manifest.json` for filesystem backups.
 - Global process-safe backup slot lock for queueing concurrent starts.
@@ -35,7 +36,9 @@ vaultGFS/
     ├── cli_restore.py       # vaultgfs-restore placeholder
     ├── config.py            # TOML loading and validation
     ├── fs_backup.py         # filesystem/GFS backup implementation
-    └── mysql_dump.py        # MySQL dump implementation
+    ├── mysql_dump.py        # MySQL dump implementation
+    ├── pfsense_backup.py    # pfSense backup implementation
+    └── retention.py         # retention pruning implementation
 ```
 
 Generated files such as `dist/`, `build/`, `*.egg-info`, logs, catalogs, and real configuration files are not part of the source tree.
@@ -47,6 +50,7 @@ Generated files such as `dist/`, `build/`, `*.egg-info`, logs, catalogs, and rea
 - `tar`.
 - `zstd`.
 - `mysqldump` and `mysql` when using MySQL jobs.
+- Network access to pfSense WebGUI when using pfSense jobs.
 - `systemd` when using `vaultgfs-reload` to generate timers.
 - `noticli` on the system `PATH` when NotiCLI notifications are enabled.
 
@@ -259,6 +263,48 @@ Recommended minimum MySQL privileges:
 GRANT SELECT, SHOW VIEW, EVENT, TRIGGER ON schema.* TO 'vaultGFS'@'localhost';
 GRANT SHOW_ROUTINE ON *.* TO 'vaultGFS'@'localhost';
 ```
+
+## pfSense Jobs
+
+Example:
+
+```toml
+[[jobs]]
+name = "pfsense-main"
+enabled = true
+type = "pfsense-config"
+base_url = "https://192.168.1.1"
+username = "vaultGFS"
+password = "CHANGE_ME"
+verify_tls = false
+include_rrd = false
+destination = "/mnt/backup/pfsense/main"
+compression_level = 22
+compression_threads = 1
+schedule = "0 4 * * *"
+
+[jobs.retention]
+keep_daily = 30
+keep_weekly = 26
+keep_monthly = 24
+```
+
+Run manually:
+
+```bash
+vaultgfs-backup --config /path/to/config.toml --job pfsense-main
+```
+
+pfSense output:
+
+```text
+<destination>/<job>-YYYYMMDD-HHMMSS.xml.zst
+```
+
+The configured pfSense user must be able to access the WebGUI backup page.
+For self-signed certificates, use `verify_tls = false` or install a trusted
+certificate and keep verification enabled. The downloaded XML is validated
+before compression and cataloging.
 
 ## Resource Monitoring
 

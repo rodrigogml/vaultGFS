@@ -59,6 +59,11 @@ keep_daily = 14
 keep_weekly = 8
 keep_monthly = 12
 
+[defaults.retention.pfsense_config]
+keep_daily = 30
+keep_weekly = 26
+keep_monthly = 24
+
 # Configuração padrão de conexão MySQL para todos os jobs mysql-dump
 [mysql]
 # Host MySQL usado quando socket não for informado
@@ -202,3 +207,26 @@ schedule = "0 4 * * *"
 # keep_daily = 14
 # keep_weekly = 8
 # keep_monthly = 12
+
+# ----------------------------
+# Definição de um job pfSense
+# Exemplo: download do XML de configuração pela WebGUI
+# ----------------------------
+[[jobs]]
+name = "example-pfsense"
+enabled = false
+type = "pfsense-config"
+base_url = "https://192.168.1.1"
+username = "vaultGFS"
+password = "CHANGE_ME"
+verify_tls = false
+include_rrd = false
+destination = "/mnt/usb1/backups/pfsense/example"
+compression_level = 22
+compression_threads = 1
+schedule = "0 4 * * *"
+
+[jobs.retention]
+keep_daily = 30
+keep_weekly = 26
+keep_monthly = 24

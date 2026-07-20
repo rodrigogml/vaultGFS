@@ -10,7 +10,7 @@ from . import catalog
 
 
 DEFAULT_FILESYSTEM_RETENTION = {"keep_full": 12, "keep_diff": 3, "keep_inc": 60}
-DEFAULT_MYSQL_RETENTION = {"keep_daily": 14, "keep_weekly": 8, "keep_monthly": 12}
+DEFAULT_MONOLITH_RETENTION = {"keep_daily": 14, "keep_weekly": 8, "keep_monthly": 12}
 
 
 @dataclass(frozen=True)
@@ -31,9 +31,11 @@ class PrunePlan:
 
 def retention_for_job(cfg: dict, job: dict) -> dict:
     typ = job["type"]
-    section = "filesystem_gfs" if typ == "filesystem-gfs" else "mysql_dump"
+    section = "filesystem_gfs" if typ == "filesystem-gfs" else typ.replace("-", "_")
     defaults = cfg.get("defaults", {}).get("retention", {}).get(section, {})
-    built_in = DEFAULT_FILESYSTEM_RETENTION if typ == "filesystem-gfs" else DEFAULT_MYSQL_RETENTION
+    if not defaults and typ == "pfsense-config":
+        defaults = cfg.get("defaults", {}).get("retention", {}).get("mysql_dump", {})
+    built_in = DEFAULT_FILESYSTEM_RETENTION if typ == "filesystem-gfs" else DEFAULT_MONOLITH_RETENTION
     effective = {**built_in, **defaults, **job.get("retention", {})}
     return {k: int(v) for k, v in effective.items()}
 
@@ -56,7 +58,7 @@ def build_prune_plan(db: sqlite3.Connection, job: dict, retention: dict) -> Prun
     runs = successful_runs(db, job)
     if job["type"] == "filesystem-gfs":
         keep = filesystem_keep_ids(runs, retention)
-    elif job["type"] == "mysql-dump":
+    elif job["type"] in {"mysql-dump", "pfsense-config"}:
         keep = mysql_keep_ids(runs, retention)
     else:
         keep = set()

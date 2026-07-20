@@ -5,6 +5,7 @@ from pathlib import Path
 from .config import load_config, validate_config, DEFAULT_CONFIG
 from .fs_backup import run_filesystem_job
 from .mysql_dump import run_mysql_job
+from .pfsense_backup import run_pfsense_job
 from .notification import NotificationEvent, log_delivery, resolve_settings, send_notification
 
 try:
@@ -97,6 +98,10 @@ def main(argv=None):
             rc=run_mysql_job(cfg, job)
             status='success' if rc == 0 else 'failed'
             summary=f'mysql backup completed with exit_code={rc}'
+        elif job["type"] == "pfsense-config" and should_notify:
+            rc=run_pfsense_job(cfg, job)
+            status='success' if rc == 0 else 'failed'
+            summary=f'pfSense backup completed with exit_code={rc}'
         elif should_notify:
             print(f"Unsupported job type: {job['type']}", file=sys.stderr)
             rc=2
