@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime, timedelta
 from pathlib import Path
 import hashlib, json, subprocess, time
 from . import catalog
@@ -38,6 +39,67 @@ def changed_rows(db, job, level, current):
             out.append(r)
     return out
 
+def cron_values(field: str, lower: int, upper: int) -> set[int] | None:
+    if field == '*':
+        return None
+    values=set()
+    for part in field.split(','):
+        value=int(part)
+        if value < lower or value > upper:
+            raise ValueError(f"cron field value out of range: {field}")
+        values.add(value)
+    return values
+
+def cron_matches(dt: datetime, expr: str) -> bool:
+    minute, hour, dom, month, dow = expr.split()
+    minutes=cron_values(minute, 0, 59)
+    hours=cron_values(hour, 0, 23)
+    doms=cron_values(dom, 1, 31)
+    months=cron_values(month, 1, 12)
+    dows=cron_values(dow, 0, 7)
+    cron_dow=(dt.weekday() + 1) % 7
+    if dows and 7 in dows:
+        dows=set(dows)
+        dows.add(0)
+    if minutes is not None and dt.minute not in minutes:
+        return False
+    if hours is not None and dt.hour not in hours:
+        return False
+    if months is not None and dt.month not in months:
+        return False
+    dom_match = doms is None or dt.day in doms
+    dow_match = dows is None or cron_dow in dows
+    if doms is not None and dows is not None:
+        return dom_match or dow_match
+    return dom_match and dow_match
+
+def latest_scheduled_at(expr: str, now: datetime | None = None) -> int | None:
+    current=(now or datetime.now()).replace(second=0, microsecond=0)
+    stop=current - timedelta(days=400)
+    while current >= stop:
+        if cron_matches(current, expr):
+            return int(current.timestamp())
+        current -= timedelta(minutes=1)
+    return None
+
+def schedule_due(db, job, level: str, schedule_key: str, now: datetime | None = None) -> bool:
+    scheduled_at=latest_scheduled_at(job[schedule_key], now)
+    if scheduled_at is None:
+        return False
+    last=catalog.last_success_run(db, job['name'], level)
+    return last is None or int(last['started_at']) < scheduled_at
+
+def effective_filesystem_level(db, job, requested_level: str, now: datetime | None = None) -> str:
+    if requested_level == 'full':
+        return 'full'
+    if schedule_due(db, job, 'full', 'schedule_full', now):
+        return 'full'
+    if requested_level == 'diff':
+        return 'diff'
+    if schedule_due(db, job, 'diff', 'schedule_diff', now):
+        return 'diff'
+    return 'inc'
+
 def make_archive(source, destdir, backup_id, cls, rels, level, threads):
     if not rels:
         return None
@@ -63,6 +125,10 @@ def make_archive(source, destdir, backup_id, cls, rels, level, threads):
 def run_filesystem_job(cfg, job, level):
     defaults=cfg.get('defaults',{})
     db=catalog.connect(defaults.get('catalog','/var/lib/vaultgfs/catalog.db'))
+    requested_level=level
+    level=effective_filesystem_level(db, job, requested_level)
+    if level != requested_level:
+        print(f"LEVEL_PROMOTED job={job['name']} requested={requested_level} effective={level}", flush=True)
     parent = None if level == 'full' else catalog.last_success_run(db, job['name'], 'full' if level == 'diff' else None)
     parent_run_id = parent['id'] if parent else None
     run_id=catalog.start_run(db, job, level, parent_run_id)

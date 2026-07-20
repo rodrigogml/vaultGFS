@@ -186,6 +186,11 @@ vaultgfs-backup --config /path/to/config.toml --job example-filesystem --level d
 vaultgfs-backup --config /path/to/config.toml --job example-filesystem --level inc
 ```
 
+When a filesystem job is requested at `inc` or `diff`, vaultGFS checks the
+parent schedule first. If the required `full` or `diff` baseline is missing or
+older than its configured schedule, the run is promoted and stored at the
+required higher level.
+
 Filesystem output:
 
 ```text

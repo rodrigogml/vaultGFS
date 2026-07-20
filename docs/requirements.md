@@ -58,6 +58,7 @@ Required behavior:
 - monthly FULL backup;
 - weekly differential backup based on latest FULL;
 - daily incremental backup based on latest successful backup;
+- requested incremental or differential runs must be promoted to the required higher level when the parent baseline is missing or older than its configured schedule;
 - one fileserver job per internal folder;
 - manifest JSON per run;
 - metadata in SQLite;
