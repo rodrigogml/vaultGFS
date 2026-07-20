@@ -23,6 +23,7 @@ def load_config(path: str | Path = DEFAULT_CONFIG) -> dict:
 def validate_config(cfg: dict) -> list[str]:
 	errors=[]
 	names=set()
+	errors.extend(validate_retention_config(cfg.get("defaults", {}).get("retention", {}), "defaults.retention"))
 	for i, job in enumerate(cfg.get("jobs", []), 1):
 		name=job.get("name")
 		typ=job.get("type")
@@ -48,5 +49,30 @@ def validate_config(cfg: dict) -> list[str]:
 			for s in job.get("schemas", []):
 				if s in SYSTEM_SCHEMAS:
 					errors.append(f"job {name}: system schema not allowed: {s}")
+		if "retention" in job:
+			errors.extend(validate_retention_config(job.get("retention", {}), f"job {name} retention"))
 	errors.extend(validate_noticli_config(cfg))
+	return errors
+
+def validate_retention_config(retention: dict, prefix: str) -> list[str]:
+	errors=[]
+	if not isinstance(retention, dict):
+		return [f"{prefix}: must be a table"]
+	sections=[]
+	if "filesystem_gfs" in retention:
+		sections.append(("filesystem_gfs", retention.get("filesystem_gfs", {}), {"keep_full", "keep_diff", "keep_inc"}))
+	if "mysql_dump" in retention:
+		sections.append(("mysql_dump", retention.get("mysql_dump", {}), {"keep_daily", "keep_weekly", "keep_monthly"}))
+	if any(k.startswith("keep_") for k in retention):
+		sections.append((None, retention, {"keep_full", "keep_diff", "keep_inc", "keep_daily", "keep_weekly", "keep_monthly"}))
+	for section, values, allowed in sections:
+		label = f"{prefix}.{section}" if section else prefix
+		if not isinstance(values, dict):
+			errors.append(f"{label}: must be a table")
+			continue
+		for key, value in values.items():
+			if key not in allowed:
+				continue
+			if not isinstance(value, int) or value < 0:
+				errors.append(f"{label}: {key} must be a non-negative integer")
 	return errors

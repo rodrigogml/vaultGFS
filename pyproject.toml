@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vaultGFS"
-version = "1.0.4"
+version = "1.1.0"
 description = "Configurable GFS-oriented backup utility for filesystems and databases"
 requires-python = ">=3.11"
 readme = "README.md"
@@ -13,6 +13,7 @@ authors = [{name = "vaultGFS contributors"}]
 
 [project.scripts]
 vaultgfs-backup = "vaultgfs.cli_backup:main"
+vaultgfs-prune = "vaultgfs.cli_prune:main"
 vaultgfs-reload = "vaultgfs.cli_reload:main"
 vaultgfs-restore = "vaultgfs.cli_restore:main"
 

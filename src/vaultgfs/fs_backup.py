@@ -63,7 +63,9 @@ def make_archive(source, destdir, backup_id, cls, rels, level, threads):
 def run_filesystem_job(cfg, job, level):
     defaults=cfg.get('defaults',{})
     db=catalog.connect(defaults.get('catalog','/var/lib/vaultgfs/catalog.db'))
-    run_id=catalog.start_run(db, job, level)
+    parent = None if level == 'full' else catalog.last_success_run(db, job['name'], 'full' if level == 'diff' else None)
+    parent_run_id = parent['id'] if parent else None
+    run_id=catalog.start_run(db, job, level, parent_run_id)
     source=Path(job['source'])
     backup_id=f"{job['name']}-{level}-{time.strftime('%Y%m%d-%H%M%S')}"
     destdir=Path(job['destination']) / level / backup_id
@@ -98,6 +100,7 @@ def run_filesystem_job(cfg, job, level):
         mp=destdir/'manifest.json'
         mp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
         catalog.insert_snapshots(db, snaps)
+        catalog.insert_artifacts(db, run_id, [destdir], 'filesystem-run')
         catalog.finish_run(db, run_id, 'success', str(destdir), str(mp), f'{len(selected)} files selected')
         print(f"SUCCESS {job['name']} {level}: {len(selected)} files -> {destdir}")
         return 0

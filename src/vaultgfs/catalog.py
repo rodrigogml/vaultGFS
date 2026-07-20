@@ -21,7 +21,10 @@ def init(db):
 	 finished_at integer,
 	 destination text,
 	 manifest_path text,
-	 message text
+	 message text,
+	 parent_run_id integer,
+	 pruned_at integer,
+	 prune_message text
 	);
 	create table if not exists file_snapshots (
 	 run_id integer not null,
@@ -36,12 +39,27 @@ def init(db):
 	 class text,
 	 primary key(run_id, relpath)
 	);
+	create table if not exists backup_artifacts (
+	 run_id integer not null,
+	 path text not null,
+	 kind text not null,
+	 primary key(run_id, path)
+	);
 	create index if not exists idx_runs_job_status on backup_runs(job_name,status,level,id);
+	create index if not exists idx_runs_parent on backup_runs(parent_run_id);
 	""")
+	ensure_column(db, "backup_runs", "parent_run_id", "integer")
+	ensure_column(db, "backup_runs", "pruned_at", "integer")
+	ensure_column(db, "backup_runs", "prune_message", "text")
 	db.commit()
 
-def start_run(db, job, level):
-	cur=db.execute("insert into backup_runs(job_name,job_type,level,status,started_at) values(?,?,?,?,?)", (job['name'], job['type'], level, 'running', int(time.time())))
+def ensure_column(db, table, column, ddl):
+	cols={r["name"] for r in db.execute(f"pragma table_info({table})")}
+	if column not in cols:
+		db.execute(f"alter table {table} add column {column} {ddl}")
+
+def start_run(db, job, level, parent_run_id=None):
+	cur=db.execute("insert into backup_runs(job_name,job_type,level,status,started_at,parent_run_id) values(?,?,?,?,?,?)", (job['name'], job['type'], level, 'running', int(time.time()), parent_run_id))
 	db.commit()
 	return cur.lastrowid
 
@@ -51,9 +69,9 @@ def finish_run(db, run_id, status, destination=None, manifest_path=None, message
 
 def last_success_run(db, job_name, level=None):
 	if level:
-		cur=db.execute("select * from backup_runs where job_name=? and status='success' and level=? order by id desc limit 1", (job_name, level))
+		cur=db.execute("select * from backup_runs where job_name=? and status='success' and level=? and pruned_at is null order by id desc limit 1", (job_name, level))
 	else:
-		cur=db.execute("select * from backup_runs where job_name=? and status='success' order by id desc limit 1", (job_name,))
+		cur=db.execute("select * from backup_runs where job_name=? and status='success' and pruned_at is null order by id desc limit 1", (job_name,))
 	return cur.fetchone()
 
 def snapshot_map(db, run_id):
@@ -61,4 +79,15 @@ def snapshot_map(db, run_id):
 
 def insert_snapshots(db, rows):
 	db.executemany("insert or replace into file_snapshots(run_id,job_name,relpath,size,mtime_ns,mode,uid,gid,sha256,class) values(?,?,?,?,?,?,?,?,?,?)", rows)
+	db.commit()
+
+def insert_artifacts(db, run_id, paths, kind):
+	db.executemany("insert or replace into backup_artifacts(run_id,path,kind) values(?,?,?)", [(run_id, str(p), kind) for p in paths])
+	db.commit()
+
+def artifacts_for_run(db, run_id):
+	return list(db.execute("select * from backup_artifacts where run_id=? order by path", (run_id,)))
+
+def mark_pruned(db, run_id, message):
+	db.execute("update backup_runs set pruned_at=?, prune_message=? where id=?", (int(time.time()), message, run_id))
 	db.commit()

@@ -31,6 +31,7 @@ Standard attributes:
 - `destination`: job destination.
 - `skip_if_unchanged`: if `true`, do not create a new backup when no changes are detected.
 - `compression_level`: optional override per job.
+- `retention`: optional override per job.
 - schedule fields in cron-like format.
 
 Cron-like format:
@@ -62,6 +63,7 @@ Required behavior:
 - metadata in SQLite;
 - optional skip when unchanged;
 - archives split by compression class.
+- retention by independent `keep_full`, `keep_diff` and `keep_inc` counts with required parent chains preserved automatically.
 
 Compression classes:
 
@@ -83,6 +85,7 @@ Initial scope:
 - full logical dumps only;
 - one or more configured schemas per job;
 - timestamped `.sql.zst` files;
+- retention by latest daily, weekly and monthly dump representatives;
 - no GFS for MySQL yet;
 - no binlog/PITR automation yet;
 - dedicated MySQL user `vaultGFS`;
@@ -131,10 +134,13 @@ none
 
 Future interactive restore utility.
 
+### `vaultgfs-prune`
+
+Evaluates retention policies and prints the runs that would be removed. It only removes artifacts and marks runs as pruned when called with `--apply`.
+
 ## Future roadmap
 
 - restore implementation;
-- retention policies;
 - backup verification;
 - remote duplication;
 - encryption;

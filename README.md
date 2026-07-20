@@ -13,6 +13,7 @@ The project is packaged as a standard Python distribution with console entrypoin
 - Global process-safe backup slot lock for queueing concurrent starts.
 - Separate archives for already-compressed files and compressible files.
 - Optional MySQL resource monitoring with passive logging or active throttling.
+- Configurable retention pruning for filesystem GFS chains and MySQL dumps.
 - Optional backup result notifications through NotiCLI.
 - Assisted environment reload that validates configuration and generates systemd units/timers.
 - TOML-based configuration.
@@ -29,6 +30,7 @@ vaultGFS/
     ├── __init__.py
     ├── catalog.py           # SQLite catalog
     ├── cli_backup.py        # vaultgfs-backup entrypoint
+    ├── cli_prune.py         # vaultgfs-prune entrypoint
     ├── cli_reload.py        # vaultgfs-reload entrypoint
     ├── cli_restore.py       # vaultgfs-restore placeholder
     ├── config.py            # TOML loading and validation
@@ -88,6 +90,7 @@ The package provides these console scripts:
 
 ```text
 vaultgfs-backup
+vaultgfs-prune
 vaultgfs-reload
 vaultgfs-restore
 ```
@@ -130,6 +133,16 @@ lock_wait_seconds = 10
 
 storage_extensions = [".jpg", ".png", ".mp4", ".zip", ".7z", ".pdf"]
 
+[defaults.retention.filesystem_gfs]
+keep_full = 12
+keep_diff = 3
+keep_inc = 60
+
+[defaults.retention.mysql_dump]
+keep_daily = 14
+keep_weekly = 8
+keep_monthly = 12
+
 [mysql]
 host = "localhost"
 port = 3306
@@ -158,6 +171,11 @@ compression_threads = 2
 schedule_full = "0 3 1 * *"
 schedule_diff = "0 2 * * 0"
 schedule_inc = "0 1 * * *"
+
+[jobs.retention]
+keep_full = 12
+keep_diff = 3
+keep_inc = 60
 ```
 
 Run manually:
@@ -211,6 +229,15 @@ MySQL output:
 <destination>/<schema>-YYYYMMDD-HHMMSS.sql.zst
 ```
 
+Optional retention override:
+
+```toml
+[jobs.retention]
+keep_daily = 14
+keep_weekly = 8
+keep_monthly = 12
+```
+
 System schemas are rejected as backup targets:
 
 ```text
@@ -249,6 +276,20 @@ max_swap_percent = 80
 ```
 
 The monitor observes the `mysqldump` and `zstd` subprocesses. It does not cap MySQL server-side I/O or memory usage.
+
+## Retention Pruning
+
+`vaultgfs-prune` evaluates retention without deleting anything unless `--apply` is passed:
+
+```bash
+vaultgfs-prune --config /path/to/config.toml
+vaultgfs-prune --config /path/to/config.toml --job example-filesystem
+vaultgfs-prune --config /path/to/config.toml --job example-filesystem --apply
+```
+
+For filesystem GFS jobs, `keep_full`, `keep_diff` and `keep_inc` keep the most recent successful runs per level. When a retained incremental or differential depends on older runs, vaultGFS automatically retains the required parent chain.
+
+For MySQL jobs, dumps are independent. Retention keeps the latest dump per day, per Sunday-to-Saturday week and per calendar month, then deduplicates overlapping selections.
 
 ## Environment Reload
 

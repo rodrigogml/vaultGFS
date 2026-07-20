@@ -87,3 +87,25 @@ def test_validate_config_allows_partial_job_override_from_global_defaults():
     }
 
     assert validate_config(cfg) == []
+
+
+def test_validate_config_reports_invalid_retention_counts():
+    cfg = {
+        "defaults": {"retention": {"filesystem_gfs": {"keep_full": -1}}},
+        "jobs": [
+            {
+                "name": "mysql",
+                "enabled": True,
+                "type": "mysql-dump",
+                "schemas": ["app"],
+                "destination": "/backup/mysql",
+                "schedule": "0 1 * * *",
+                "retention": {"keep_daily": "14"},
+            }
+        ],
+    }
+
+    errors = validate_config(cfg)
+
+    assert "defaults.retention.filesystem_gfs: keep_full must be a non-negative integer" in errors
+    assert "job mysql retention: keep_daily must be a non-negative integer" in errors

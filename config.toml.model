@@ -39,6 +39,24 @@ storage_extensions = [
  ".exe", ".msi", ".apk"
 ]
 
+# Retenção padrão para jobs filesystem-gfs.
+# G = full, F = diff, S = inc. A retenção é por contagem de backups
+# bem-sucedidos mais recentes. Pais e avós necessários para restauração são
+# preservados automaticamente, mesmo quando excederem a contagem direta.
+[defaults.retention.filesystem_gfs]
+keep_full = 12
+keep_diff = 3
+keep_inc = 60
+
+# Retenção padrão para jobs mysql-dump.
+# Dumps são independentes; o prune mantém o dump mais recente de cada dia,
+# semana domingo-sábado e mês civil, deduplicando quando um arquivo cair em
+# mais de uma categoria.
+[defaults.retention.mysql_dump]
+keep_daily = 14
+keep_weekly = 8
+keep_monthly = 12
+
 # Configuração padrão de conexão MySQL para todos os jobs mysql-dump
 [mysql]
 # Host MySQL usado quando socket não for informado
@@ -130,6 +148,12 @@ schedule_diff = "0 2 * * 0"
 # Agendamento sugerido (cron) para backups incrementais (INC) deste job
 schedule_inc = "0 1 * * *"
 
+# Optional retention override for this job.
+[jobs.retention]
+# keep_full = 12
+# keep_diff = 3
+# keep_inc = 60
+
 # Optional NotiCLI override for this job.
 # Omitted fields inherit the corresponding global setting.
 [jobs.notifications.noticli]
@@ -170,3 +194,9 @@ skip_if_unchanged = false
 compression_level = 22
 # Agendamento sugerido (cron) diário para este dump MySQL
 schedule = "0 4 * * *"
+
+# Optional retention override for this job.
+# [jobs.retention]
+# keep_daily = 14
+# keep_weekly = 8
+# keep_monthly = 12

@@ -163,6 +163,7 @@ def run_mysql_job(cfg, job):
             if rc1 or rc2:
                 raise RuntimeError(f'mysqldump/zstd failed for {schema}: rc dump={rc1} zstd={rc2} {e1.decode(errors="replace")} {e2.decode(errors="replace")}')
             outputs.append(str(out))
+            catalog.insert_artifacts(db, run_id, [out], 'mysql-dump')
         catalog.finish_run(db, run_id, 'success', str(dest), None, f'dumped {len(outputs)} schema(s)')
         print(f"SUCCESS {job['name']}: dumped {len(outputs)} schema(s) -> {dest}")
         return 0
